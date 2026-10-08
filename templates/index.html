@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modificação de Matrícula | POLI UPE</title>
+    <style>
+        :root {
+            --azul-upe: #003366;
+            --azul-hover: #004d99;
+            --vermelho-upe: #cc0000;
+            --verde-sucesso: #28a745;
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-main: #1d1d1f;
+            --text-muted: #6e6e73;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+        body { min-height: 100vh; background: #f5f5f7; color: var(--text-main); display: flex; justify-content: center; align-items: center; }
+
+        .main-card {
+            width: 95%; max-width: 1080px; background: var(--glass-bg); backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 28px; padding: 35px; margin: 20px 0;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .wizard-steps {
+            display: flex; justify-content: space-between; margin-bottom: 25px; border-bottom: 2px solid #e5e5ea; padding-bottom: 15px;
+        }
+        .step { font-weight: bold; color: var(--text-muted); font-size: 0.95rem; }
+        .step.active { color: var(--azul-upe); border-bottom: 3px solid var(--azul-upe); padding-bottom: 12px; }
+
+        .btn {
+            background-color: var(--azul-upe); color: #fff; border: none; padding: 12px 24px;
+            font-weight: 600; border-radius: 99px; cursor: pointer; transition: all 0.2s;
+        }
+        .btn:hover { background-color: var(--azul-hover); transform: translateY(-1px); }
+        .btn-secondary { background-color: #e5e5ea; color: #1d1d1f; }
+        .btn-secondary:hover { background-color: #d1d1d6; }
+        .btn-back { display: inline-flex; align-items: center; gap: 5px; background: none; border: 1px solid #ccc; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; transition: 0.2s; }
+        .btn-back:hover { background: #e5e5ea; color: #000; }
+
+        .grid-chairs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        
+        .chair-card {
+            background: #fff; border: 2px solid #e5e5ea; border-radius: 16px; padding: 18px;
+            cursor: pointer; transition: all 0.25s ease; position: relative; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .chair-card:hover { border-color: var(--azul-upe); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        
+        .chair-card.selected {
+            background-color: var(--azul-upe) !important;
+            border-color: var(--azul-upe) !important;
+            color: #ffffff !important;
+            box-shadow: 0 8px 20px rgba(0, 51, 102, 0.3);
+        }
+        .chair-card.selected small, .chair-card.selected div { color: rgba(255, 255, 255, 0.85) !important; }
+
+        .chair-card.selected-remove {
+            background-color: var(--vermelho-upe) !important;
+            border-color: var(--vermelho-upe) !important;
+            color: #ffffff !important;
+            box-shadow: 0 8px 20px rgba(204, 0, 0, 0.3);
+        }
+        .chair-card.selected-remove small, .chair-card.selected-remove div { color: rgba(255, 255, 255, 0.85) !important; }
+
+        .badge-check {
+            position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.25);
+            border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-content { background: #fff; padding: 25px; border-radius: 20px; max-width: 480px; width: 90%; }
+        .turma-option {
+            padding: 14px; border: 2px solid #e5e5ea; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s;
+        }
+        .turma-option:hover { background: #f0f4f8; border-color: var(--azul-upe); }
+    </style>
+</head>
+<body>
+
+    <main class="main-card">
+
+        <div id="user-header" style="display:none; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span id="user-name" style="font-weight: bold; color: var(--azul-upe); font-size: 1.1rem;"></span>
+            <button class="btn btn-secondary" onclick="fazerLogout()">Sair</button>
+        </div>
+
+        <section id="screen-auth" class="screen active">
+            <h1 id="auth-title" style="color: var(--azul-upe); text-align: center; margin-bottom: 10px;">Modificação de Matrícula</h1>
+            <p style="text-align: center; color: var(--text-muted); margin-bottom: 20px;">POLI UPE • Engenharia Elétrica Eletrônica</p>
+            
+            <div style="max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px;">
+                <input type="text" id="auth-nome" placeholder="Nome Completo" style="padding: 14px; border-radius: 10px; border: 1px solid #ccc; display: none;">
+                <input type="text" id="auth-cpf" placeholder="CPF" style="padding: 14px; border-radius: 10px; border: 1px solid #ccc;">
+                <input type="password" id="auth-pass" placeholder="Senha" style="padding: 14px; border-radius: 10px; border: 1px solid #ccc;">
+                
+                <button class="btn" id="btn-auth-submit" onclick="executarAutenticacao()">Entrar</button>
+                
+                <p style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">
+                    <span id="auth-toggle-text">Ainda não tem conta?</span>
+                    <a href="javascript:void(0)" id="auth-toggle-link" onclick="alternarModoAuth()" style="color: var(--azul-upe); font-weight: bold; text-decoration: none; margin-left: 5px;">Criar Conta</a>
+                </p>
+            </div>
+        </section>
+
+        <section id="screen-wizard" class="screen">
+            <div class="wizard-steps">
+                <span class="step active" id="step-1-label">1. Matérias Atuais</span>
+                <span class="step" id="step-2-label">2. Escolher Modificações</span>
+                <span class="step" id="step-3-label">3. Justificativa</span>
+            </div>
+
+            <div id="t1" class="tab-step">
+                <h2 style="color: var(--azul-upe);">Etapa 1: Marque as matérias em que você está matriculado</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">Clique nas matérias cursadas para definir suas turmas e horários atuais.</p>
+                
+                <div class="grid-chairs" id="container-materias-atuais"></div>
+
+                <div style="margin-top: 25px; text-align: right;">
+                    <button class="btn" onclick="salvarEtapa1()">Avançar para Modificações &rarr;</button>
+                </div>
+            </div>
+
+            <div id="t2" class="tab-step" style="display: none;">
+                <button class="btn-back" onclick="irParaPasso(1)">&larr; Voltar para Etapa 1</button>
+                
+                <h2 style="color: var(--azul-upe);">Etapa 2: Selecione as modificações desejadas</h2>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Você pode apenas remover matérias, apenas adicionar ou realizar ambas as ações de forma independente.</p>
+
+                <div style="background: #fff; padding: 20px; border-radius: 18px; border: 1px solid #e5e5ea; margin-bottom: 25px;">
+                    <h3 style="color: var(--vermelho-upe); margin-bottom: 8px;">1. Marque as matérias que deseja DESMATRICULAR (Remover):</h3>
+                    <div class="grid-chairs" id="container-materias-remover"></div>
+                </div>
+
+                <div style="background: #fff; padding: 20px; border-radius: 18px; border: 1px solid #e5e5ea;">
+                    <h3 style="color: var(--azul-upe); margin-bottom: 8px;">2. Marque as NOVAS matérias que deseja ADICIONAR:</h3>
+                    <div class="grid-chairs" id="container-materias-adicionar"></div>
+                </div>
+
+                <div style="margin-top: 25px; display: flex; justify-content: space-between;">
+                    <button class="btn btn-secondary" onclick="irParaPasso(1)">&larr; Voltar</button>
+                    <button class="btn" onclick="salvarEtapa2()">Avançar com Seleção Completa &rarr;</button>
+                </div>
+            </div>
+
+            <div id="t3" class="tab-step" style="display: none;">
+                <button class="btn-back" onclick="irParaPasso(2)">&larr; Voltar para Etapa 2</button>
+                
+                <h2 style="color: var(--azul-upe);">Etapa 3: Apelo ao Coordenador</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">Revise as alterações e insira a justificativa.</p>
+
+                <div style="background: #fff; padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 1px solid #e5e5ea;">
+                    <strong style="font-size: 1.05rem;">Resumo das Alterações Solicitadas:</strong>
+                    <div id="resumo-remocoes" style="color: var(--vermelho-upe); margin-top: 10px; font-weight: 500;"></div>
+                    <div id="resumo-adicoes" style="color: var(--azul-upe); margin-top: 8px; font-weight: 500;"></div>
+                </div>
+
+                <textarea id="apelo-texto" rows="5" placeholder="Digite aqui sua justificativa circumstantial para o coordenador..." style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ccc; font-size: 1rem;"></textarea>
+
+                <div style="margin-top: 15px;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Comprovante / Documento Anexo (Opcional):</label>
+                    <input type="file" id="apelo-file" accept=".pdf,.png,.jpg">
+                </div>
+
+                <div style="margin-top: 25px; display: flex; justify-content: space-between;">
+                    <button class="btn btn-secondary" onclick="irParaPasso(2)">&larr; Voltar</button>
+                    <button class="btn" onclick="enviarApeloFinal()">Enviar Solicitação &rarr;</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div class="modal" id="modal-horarios">
+        <div class="modal-content">
+            <h3 id="modal-title" style="color: var(--azul-upe); margin-bottom: 15px;">Selecione a Turma / Horário</h3>
+            <div id="modal-turmas-list"></div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="fecharModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        let modoCadastro = false;
+        let ofertaCompleta = [];
+        
+        let matriculasAtuais = {};
+        let turmasParaRemover = [];
+        let turmasParaAdicionar = {};
+
+        let disciplinaTemp = null;
+        let modoSelecaoModal = 'T1'; 
+
+        function alternarModoAuth() {
+            modoCadastro = !modoCadastro;
+            document.getElementById('auth-nome').style.display = modoCadastro ? 'block' : 'none';
+            document.getElementById('auth-title').innerText = modoCadastro ? 'Criar Nova Conta' : 'Modificação de Matrícula';
+            document.getElementById('btn-auth-submit').innerText = modoCadastro ? 'Cadastrar e Entrar' : 'Entrar';
+            document.getElementById('auth-toggle-text').innerText = modoCadastro ? 'Já possui uma conta?' : 'Ainda não tem conta?';
+            document.getElementById('auth-toggle-link').innerText = modoCadastro ? 'Fazer Login' : 'Criar Conta';
+        }
+
+        async function executarAutenticacao() {
+            const cpf = document.getElementById('auth-cpf').value;
+            const pass = document.getElementById('auth-pass').value;
+            const nome = document.getElementById('auth-nome').value;
+
+            const url = modoCadastro ? '/cadastrar' : '/login';
+            const bodyData = modoCadastro ? { nome, cpf, senha: pass } : { cpf, senha: pass };
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(bodyData)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                if (data.user.perfil === 'coordenador') {
+                    window.location.href = '/coordenador';
+                    return;
+                }
+                document.getElementById('screen-auth').classList.remove('active');
+                document.getElementById('screen-wizard').classList.add('active');
+                document.getElementById('user-header').style.display = 'flex';
+                document.getElementById('user-name').innerText = `Aluno: ${data.user.nome}`;
+                await carregarOferta();
+            } else {
+                alert(data.message || 'Erro na autenticação');
+            }
+        }
+
+        async function carregarOferta() {
+            const res = await fetch('/listar-oferta-turmas');
+            const data = await res.json();
+            if (data.status === 'success') {
+                ofertaCompleta = data.disciplinas;
+                renderizarTela1();
+            }
+        }
+
+        function renderizarTela1() {
+            const container = document.getElementById('container-materias-atuais');
+            container.innerHTML = '';
+
+            ofertaCompleta.forEach(d => {
+                const isSelected = !!matriculasAtuais[d.id];
+                const card = document.createElement('div');
+                card.className = `chair-card ${isSelected ? 'selected' : ''}`;
+                card.id = `card-t1-${d.id}`;
+                
+                const infoTurma = isSelected ? `<div style="font-size:0.85rem; margin-top:6px; font-weight:600;">✓ ${matriculasAtuais[d.id].codigo_turma} (${matriculasAtuais[d.id].horario})</div>` : '';
+
+                card.innerHTML = `
+                    ${isSelected ? '<div class="badge-check">✓</div>' : ''}
+                    <div>
+                        <strong>${d.nome}</strong><br>
+                        <small style="color:#666;">${d.bloco}</small>
+                    </div>
+                    ${infoTurma}
+                `;
+
+                card.onclick = () => {
+                    if (matriculasAtuais[d.id]) {
+                        delete matriculasAtuais[d.id];
+                        renderizarTela1();
+                    } else {
+                        modoSelecaoModal = 'T1';
+                        abrirModalHorarios(d);
+                    }
+                };
+                container.appendChild(card);
+            });
+        }
+
+        function abrirModalHorarios(disciplina) {
+            disciplinaTemp = disciplina;
+            document.getElementById('modal-title').innerText = `Turmas: ${disciplina.nome}`;
+            const list = document.getElementById('modal-turmas-list');
+            list.innerHTML = '';
+
+            if (!disciplina.turmas || disciplina.turmas.length === 0) {
+                list.innerHTML = '<p style="color:#888;">Nenhuma turma cadastrada para esta matéria.</p>';
+            } else {
+                disciplina.turmas.forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = 'turma-option';
+                    item.innerHTML = `<strong>${t.codigo_turma}</strong> (${t.turno})<br><small>${t.horario}</small>`;
+                    item.onclick = () => selecionarTurma(t);
+                    list.appendChild(item);
+                });
+            }
+            document.getElementById('modal-horarios').style.display = 'flex';
+        }
+
+        function selecionarTurma(turma) {
+            if (modoSelecaoModal === 'T1') {
+                matriculasAtuais[disciplinaTemp.id] = {
+                    turma_id: turma.turma_id,
+                    codigo_turma: turma.codigo_turma,
+                    horario: turma.horario,
+                    disciplina_nome: disciplinaTemp.nome
+                };
+                renderizarTela1();
+            } else if (modoSelecaoModal === 'T2_ADD') {
+                turmasParaAdicionar[disciplinaTemp.id] = {
+                    turma_id: turma.turma_id,
+                    codigo_turma: turma.codigo_turma,
+                    horario: turma.horario,
+                    disciplina_nome: disciplinaTemp.nome
+                };
+                renderizarTela2();
+            }
+            fecharModal();
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-horarios').style.display = 'none';
+        }
+
+        async function salvarEtapa1() {
+            const turmasIds = Object.values(matriculasAtuais).map(m => m.turma_id);
+            await fetch('/salvar-matricula-atual', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ turmas_ids: turmasIds })
+            });
+            irParaPasso(2);
+        }
+
+        function irParaPasso(passo) {
+            document.querySelectorAll('.tab-step').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.wizard-steps .step').forEach(s => s.classList.remove('active'));
+
+            document.getElementById(`t${passo}`).style.display = 'block';
+            document.getElementById(`step-${passo}-label`).classList.add('active');
+
+            if (passo === 2) renderizarTela2();
+            if (passo === 3) renderizarTela3();
+        }
+
+        function renderizarTela2() {
+            const containerRemover = document.getElementById('container-materias-remover');
+            containerRemover.innerHTML = '';
+            
+            const listaAtuais = Object.values(matriculasAtuais);
+            if (listaAtuais.length === 0) {
+                containerRemover.innerHTML = '<p style="color:#888;">Você não selecionou matérias atuais na Etapa 1.</p>';
+            } else {
+                listaAtuais.forEach(m => {
+                    const isRemover = turmasParaRemover.includes(m.turma_id);
+                    const card = document.createElement('div');
+                    card.className = `chair-card ${isRemover ? 'selected-remove' : ''}`;
+                    card.innerHTML = `
+                        ${isRemover ? '<div class="badge-check">✕</div>' : ''}
+                        <div>
+                            <strong>${m.disciplina_nome}</strong><br>
+                            <small>${m.codigo_turma} (${m.horario})</small>
+                        </div>
+                        <div style="font-size:0.8rem; margin-top:8px; font-weight:bold;">
+                            ${isRemover ? '✗ Marcada para desmatricular' : 'Clique para desmatricular'}
+                        </div>
+                    `;
+                    card.onclick = () => {
+                        if (isRemover) {
+                            turmasParaRemover = turmasParaRemover.filter(id => id !== m.turma_id);
+                        } else {
+                            turmasParaRemover.push(m.turma_id);
+                        }
+                        renderizarTela2();
+                    };
+                    containerRemover.appendChild(card);
+                });
+            }
+
+            const containerAdicionar = document.getElementById('container-materias-adicionar');
+            containerAdicionar.innerHTML = '';
+
+            // Conjunto com as chaves (IDs das disciplinas) em que o aluno já está matriculado
+            const idsMatriculados = Object.keys(matriculasAtuais);
+
+            // Filtra ofertas completas ignorando matérias selecionadas na Etapa 1
+            const ofertasDisponiveis = ofertaCompleta.filter(d => !idsMatriculados.includes(String(d.id)));
+
+            ofertasDisponiveis.forEach(d => {
+                const isAdd = !!turmasParaAdicionar[d.id];
+                const card = document.createElement('div');
+                card.className = `chair-card ${isAdd ? 'selected' : ''}`;
+                
+                const infoAdd = isAdd ? `<div style="font-size:0.85rem; margin-top:6px; font-weight:600;">✓ ${turmasParaAdicionar[d.id].codigo_turma} (${turmasParaAdicionar[d.id].horario})</div>` : '';
+
+                card.innerHTML = `
+                    ${isAdd ? '<div class="badge-check">✓</div>' : ''}
+                    <div>
+                        <strong>${d.nome}</strong><br>
+                        <small style="color:#666;">${d.bloco}</small>
+                    </div>
+                    ${infoAdd}
+                `;
+
+                card.onclick = () => {
+                    if (turmasParaAdicionar[d.id]) {
+                        delete turmasParaAdicionar[d.id];
+                        renderizarTela2();
+                    } else {
+                        modoSelecaoModal = 'T2_ADD';
+                        abrirModalHorarios(d);
+                    }
+                };
+                containerAdicionar.appendChild(card);
+            });
+        }
+
+        // Função para verificar se há choque de horário
+        function verificarConflitosDeHorario() {
+            // Matérias mantidas (matérias atuais excluindo as marcadas para remoção)
+            const materiasMantidas = Object.values(matriculasAtuais).filter(m => !turmasParaRemover.includes(m.turma_id));
+            const novasMaterias = Object.values(turmasParaAdicionar);
+
+            const todasFinal = [...materiasMantidas, ...novasMaterias];
+
+            for (let i = 0; i < todasFinal.length; i++) {
+                for (let j = i + 1; j < todasFinal.length; j++) {
+                    const m1 = todasFinal[i];
+                    const m2 = todasFinal[j];
+
+                    if (haChoqueEntreHorarios(m1.horario, m2.horario)) {
+                        return {
+                            conflito: true,
+                            m1: m1.disciplina_nome,
+                            m2: m2.disciplina_nome,
+                            h1: m1.horario,
+                            h2: m2.horario
+                        };
+                    }
+                }
+            }
+            return { conflito: false };
+        }
+
+        function haChoqueEntreHorarios(horarioStr1, horarioStr2) {
+            if (!horarioStr1 || !horarioStr2) return false;
+
+            // Função para tratar cada bloco de horário separadamente (ex: "SEG 10:30-12:10")
+            const parseBlocos = (str) => {
+                return str.split(',').map(item => {
+                    const partes = item.trim().split(/\s+/);
+                    const dia = partes[0] ? partes[0].toUpperCase() : '';
+                    let inicio = 0, fim = 0;
+                    if (partes[1] && partes[1].includes('-')) {
+                        const [hInicio, hFim] = partes[1].split('-');
+                        const toMinutes = (timeStr) => {
+                            const [h, m] = timeStr.split(':').map(Number);
+                            return h * 60 + m;
+                        };
+                        inicio = toMinutes(hInicio);
+                        fim = toMinutes(hFim);
+                    }
+                    return { dia, inicio, fim };
+                });
+            };
+
+            const blocos1 = parseBlocos(horarioStr1);
+            const blocos2 = parseBlocos(horarioStr2);
+
+            for (const b1 of blocos1) {
+                for (const b2 of blocos2) {
+                    // Verifica se é o mesmo dia
+                    if (b1.dia === b2.dia && b1.dia !== '') {
+                        // Verifica se os intervalos de minutos se sobrepõem
+                        if (b1.inicio < b2.fim && b1.fim > b2.inicio) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function salvarEtapa2() {
+            const conflito = verificarConflitosDeHorario();
+            if (conflito.conflito) {
+                alert(`Conflito de horário detectado entre as disciplinas:\n- ${conflito.m1} (${conflito.h1})\n- ${conflito.m2} (${conflito.h2})\n\nPor favor, ajuste suas seleções.`);
+                return;
+            }
+            if (turmasParaRemover.length === 0 && Object.keys(turmasParaAdicionar).length === 0) {
+                alert("Selecione ao menos uma modificação (adicionar ou remover) para avançar.");
+                return;
+            }
+            irParaPasso(3);
+        }
+
+        function renderizarTela3() {
+            const resRemocoes = document.getElementById('resumo-remocoes');
+            const resAdicoes = document.getElementById('resumo-adicoes');
+
+            resRemocoes.innerHTML = '';
+            resAdicoes.innerHTML = '';
+
+            let countRem = 0;
+            let countAdd = 0;
+
+            const atuais = Object.values(matriculasAtuais);
+            atuais.forEach(m => {
+                if (turmasParaRemover.includes(m.turma_id)) {
+                    resRemocoes.innerHTML += `<div>✕ Desmatricular: ${m.disciplina_nome} (${m.codigo_turma})</div>`;
+                    countRem++;
+                }
+            });
+
+            const adicoes = Object.values(turmasParaAdicionar);
+            adicoes.forEach(m => {
+                resAdicoes.innerHTML += `<div>✓ Adicionar: ${m.disciplina_nome} (${m.codigo_turma} - ${m.horario})</div>`;
+                countAdd++;
+            });
+
+            if (countRem === 0) resRemocoes.innerHTML = '<div style="color:#888;">Nenhuma disciplina selecionada para remoção.</div>';
+            if (countAdd === 0) resAdicoes.innerHTML = '<div style="color:#888;">Nenhuma disciplina selecionada para adição.</div>';
+        }
+
+        async function enviarApeloFinal() {
+            const justificativa = document.getElementById('apelo-texto').value;
+            const fileInput = document.getElementById('apelo-file');
+            
+            if (!justificativa.trim()) {
+                alert("A justificativa é obrigatória.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('justificativa', justificativa);
+            formData.append('turmas_remover', JSON.stringify(turmasParaRemover));
+            
+            const idsAdicionar = Object.values(turmasParaAdicionar).map(t => t.turma_id);
+            formData.append('turmas_adicionar', JSON.stringify(idsAdicionar));
+
+            if (fileInput.files.length > 0) {
+                formData.append('documento', fileInput.files[0]);
+            }
+
+            try {
+                const res = await fetch('/enviar-apelo-modificacao', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Sua solicitação foi enviada com sucesso!");
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Erro ao enviar solicitação.");
+                }
+            } catch (err) {
+                alert("Falha na conexão ao enviar o apelo.");
+            }
+        }
+
+        async function fazerLogout() {
+            await fetch('/logout', { method: 'POST' });
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
